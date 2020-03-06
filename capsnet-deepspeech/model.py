@@ -186,20 +186,13 @@ class DeepSpeech(nn.Module):
             nn.Hardtanh(0, 20, inplace=True)
         ) if not bidirectional else None
         
-        #fully_connected = nn.Sequential(
-        #    nn.BatchNorm1d(rnn_hidden_size),
-        #    nn.Linear(rnn_hidden_size, num_classes, bias=False)
-        #)
-        #self.fc = nn.Sequential(
-        #    SequenceWise(fully_connected),
-        #)
-        #self.bn = nn.BatchNorm1d(batch_size)
+        
         fully_connected = nn.Sequential(
             nn.BatchNorm1d(rnn_hidden_size),
-            DigitCaps()
+            DigitCaps()  #カプセル化、ルーティング
         )
-        #self.bn = nn.BatchNorm1d(rnn_hidden_size)
-        #self.digit_caps = DigitCaps()
+        
+        
         self.fc = nn.Sequential(
             SequenceWise(fully_connected),
         )
@@ -210,27 +203,29 @@ class DeepSpeech(nn.Module):
         lengths = lengths.cpu().int()
         output_lengths = self.get_seq_lens(lengths)
         #pdb.set_trace()
+        #畳み込み
         x, _ = self.conv(x, output_lengths)
 
         sizes = x.size()
-        #print("sizes=" , sizes)
+        
         x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
         x = x.transpose(1, 2).transpose(0, 1).contiguous()  # TxNxH
-
+        
+        #RNN(GRU)
         for rnn in self.rnns:
             x = rnn(x, output_lengths)
 
         if not self.bidirectional:  # no need for lookahead layer in bidirectional
             x = self.lookahead(x)
         
-        
+        #カプセル化、ルーティング
         x = self.fc(x)
         
         x = x.transpose(0, 1)
         # identity in training mode, softmax in eval mode
         x = x.log_softmax(2)
         
-        #x = self.inference_softmax(x)
+        
         return x, output_lengths
 
     def get_seq_lens(self, input_length):

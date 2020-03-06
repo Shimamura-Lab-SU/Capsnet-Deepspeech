@@ -23,7 +23,7 @@ class DigitCaps(nn.Module):
 		self.routing_iters = 3
 		#self.module = module        
 		#self.gpu = gpu
-
+		#カプセルの設定
 		self.in_capsules = 50
 		self.in_capsule_size = 9
 		self.out_capsules = 29
@@ -37,6 +37,7 @@ class DigitCaps(nn.Module):
 				self.in_capsule_size
 			)
 		)
+		#カプセル化のパラメータ
 		self.conv = nn.Conv2d(
 			in_channels=1,
 			out_channels=50,
@@ -57,7 +58,7 @@ class DigitCaps(nn.Module):
 	#@profile
 	def forward(self, x):
 		# x: [ batch_size,in_capsules=1152, in_capsule_size=8]
-
+		#カプセル化(畳み込み)
 		si = x.size(0)
 		x = torch.reshape(x,(si,20 ,20))
 		x = x.unsqueeze(1)
@@ -67,7 +68,6 @@ class DigitCaps(nn.Module):
 
 		x = torch.stack([x] * self.out_capsules, dim=2)
 		# x: [batch_size, in_capsules=1152, out_capsules=10, in_capsule_size=8]
-
 
 		
 		W = torch.cat([self.W.unsqueeze(0)] * si, dim=0)#.to(device)
@@ -87,18 +87,18 @@ class DigitCaps(nn.Module):
 		b_ij = Variable(torch.zeros(self.in_capsules, self.out_capsules, 1)).to(device)
 		# b_ij: [in_capsules=1152, out_capsules=10, 1]
 		#pdb.set_trace()
-		# Iterative routing.
+
+		#ルーティング
 		for iteration in range(self.routing_iters):
 			# Convert routing logits to softmax.
 			#pdb.set_trace()
-
 
 			c_ij = b_ij.unsqueeze(0)
 			c_ij = c_ij.log_softmax(dim=2)
 
 			c_ij = torch.cat([c_ij] * si, dim=0).unsqueeze(4)
 			# c_ij: [batch_size, in_capsules=1152, out_capsules=10, 1, 1]
-			
+			# 3イタレーション行う
 			if iteration == self.routing_iters - 1:
 				# Apply routing `c_ij` to weighted inputs `u_hat`.
 
@@ -109,7 +109,7 @@ class DigitCaps(nn.Module):
 
 			else:
 				# Apply routing `c_ij` to weighted inputs `u_hat`.
-				s_j = (c_ij * u_hat_detached).sum(dim=1, keepdim=True)#
+				s_j = (c_ij * u_hat_detached).sum(dim=1, keepdim=True)
 				# s_j: [batch_size, 1, out_capsules=10, out_capsule_size=16, 1]
 				v_j = squash(s_j, dim=3)
 				# v_j: [batch_size, 1, out_capsules=10, out_capsule_size=16, 1]
