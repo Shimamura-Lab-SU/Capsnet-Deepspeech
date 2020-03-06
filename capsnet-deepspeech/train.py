@@ -246,6 +246,7 @@ if __name__ == '__main__':
     
     #reporter = MemReporter(model)
     #reporter.report()
+    
     for epoch in range(start_epoch, args.epochs):
         
         model.train()
@@ -273,8 +274,7 @@ if __name__ == '__main__':
             targets = targets.to(device)
             
             
-            if nowitr % 200  == 0:
-                
+            if nowitr % 200  == 0:   
                 split_targets = []
                 offset = 0
                 for size in target_sizes:
@@ -294,11 +294,11 @@ if __name__ == '__main__':
             output_sizes = output_sizes.to(device)
             
             #torch.autograd.set_detect_anomaly(True)
-            loss = criterion(float_out, targets, output_sizes, target_sizes)#CTC損失
+            loss = criterion(float_out, targets, output_sizes, target_sizes)#CTC損失関数
             loss = loss.to(device)
             
-            #loss = loss / inputs.size(0)  # average the loss by minibatch torch.nn.CTCLossはdefaltでmeanのため
-            #del float_out,targets, target_sizes, inputs
+            #loss = loss / inputs.size(0)  # average the loss by minibatch torch.nn.CTCLossはdefaltでmeanのためいらない
+            
             if args.distributed:
                 #loss = loss.to(device)
                 loss_value = reduce_tensor(loss, args.world_size).item()
@@ -342,6 +342,7 @@ if __name__ == '__main__':
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
                     (epoch + 1), (i + 1), len(train_sampler), batch_time=batch_time, data_time=data_time, loss=losses))
             writer.add_scalar('loss_iter',losses.val,nowitr+1)
+            #損失値の保存
             if args.checkpoint_per_batch > 0 and i > 0 and (i + 1) % args.checkpoint_per_batch == 0 and main_proc:
                 file_path = '%s/deepspeech_checkpoint_epoch_%d_iter_%d.pth' % (save_folder, epoch + 1, i + 1)
                 print("Saving checkpoint model to %s" % file_path)
